@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身數據報告生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #report-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>健身數據報告生成器</h1>
+    
+    <form id="fitness-data-form">
+        <div class="section-title">
+            <h2>基本資訊</h2>
+        </div>
+        <div class="form-group">
+            <label for="patient-id">患者ID:</label>
+            <input type="text" id="patient-id" name="patient-id" required>
+        </div>
+
+        <div class="section-title">
+            <h2>健康數據</h2>
+        </div>
+        
+        <div class="form-group">
+            <label for="heart-rate">心率 (次/分鐘):</label>
+            <input type="number" id="heart-rate" name="heart-rate" min="30" max="220" required>
+        </div>
+
+        <div class="form-group">
+            <label for="weight">體重 (公斤):</label>
+            <input type="number" id="weight" name="weight" min="20" max="300" step="0.1" required>
+        </div>
+
+        <div class="form-group">
+            <label for="height">身高 (公分):</label>
+            <input type="number" id="height" name="height" min="50" max="250" required>
+        </div>
+
+        <div class="form-group">
+            <label for="bmi">BMI:</label>
+            <input type="number" id="bmi" name="bmi" min="10" max="50" step="0.1" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="blood-pressure">血壓 (收縮壓/舒張壓, 例如: 120/80):</label>
+            <input type="text" id="blood-pressure" name="blood-pressure" pattern="\d+/\d+" required placeholder="範例: 120/80">
+        </div>
+
+        <div class="form-group">
+            <label for="exercise-duration">運動時間 (分鐘):</label>
+            <input type="number" id="exercise-duration" name="exercise-duration" min="0" max="240" required>
+        </div>
+
+        <button type="submit">生成報告</button>
+    </form>
+
+    <div id="report-container">
+        <h2>報告結果</h2>
+        <div id="report-status">請填寫健康數據</div>
+        <div id="report-output"></div>
+    </div>
+
+    <script>
+        // 計算BMI
+        document.getElementById('height').addEventListener('input', calculateBMI);
+        document.getElementById('weight').addEventListener('input', calculateBMI);
+
+        function calculateBMI() {
+            const height = document.getElementById('height').value;
+            const weight = document.getElementById('weight').value;
+            
+            if (height && weight) {
+                // 將身高轉換為米
+                const heightInMeters = height / 100;
+                const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
+                document.getElementById('bmi').value = bmi;
+            }
+        }
+
+        // 提交表單
+        document.getElementById('fitness-data-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            // 獲取表單數據
+            const patientId = document.getElementById('patient-id').value;
+            const heartRate = document.getElementById('heart-rate').value;
+            const weight = document.getElementById('weight').value;
+            const height = document.getElementById('height').value;
+            const bmi = document.getElementById('bmi').value;
+            const bloodPressure = document.getElementById('blood-pressure').value;
+            const exerciseDuration = document.getElementById('exercise-duration').value;
+
+            // 顯示加載狀態
+            const reportStatus = document.getElementById('report-status');
+            const reportOutput = document.getElementById('report-output');
+            reportStatus.innerHTML = '正在生成報告...';
+            reportOutput.innerHTML = '';
+
+            // 發送請求到後端
+            fetch('http://localhost:5000/generate_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    patient_id: patientId,
+                    heart_rate: parseInt(heartRate),
+                    weight: parseFloat(weight),
+                    height: parseInt(height),
+                    bmi: parseFloat(bmi),
+                    blood_pressure: bloodPressure,
+                    exercise_duration: parseInt(exerciseDuration)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.report_path) {
+                    reportStatus.innerHTML = '報告生成成功!';
+                    reportOutput.innerHTML = `
+                        <p>報告已生成: ${data.report_path}</p>
+                        <p>報告檔案位於伺服器的 output 資料夾中</p>
+                        <p>患者姓名: ${data.patient_name || '未知'}</p>
+                    `;
+                } else {
+                    reportStatus.innerHTML = '報告生成失敗';
+					const errMsg = data.message || '伺服器回傳錯誤，但未提供詳情';
+                    reportOutput.innerHTML = `<p>錯誤: ${errMsg}</p>`;
+                }
+            })
+            .catch(error => {
+                reportStatus.innerHTML = '報告生成失敗';
+                reportOutput.innerHTML = `<p>錯誤: ${error.message}</p>`;
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
