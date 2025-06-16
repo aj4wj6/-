@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身數據報告生成器</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        input[readonly] {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #4CAF50, #2E8B57);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        #report-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            display: none; /* Initially hidden */
+        }
+        .section-title {
+            grid-column: 1 / -1;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .checkbox-group input {
+            width: auto;
+        }
+        #report-status {
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .status-loading { background-color: #e3f2fd; color: #0d47a1; }
+        .status-success { background-color: #e8f5e9; color: #1b5e20; }
+        .status-error { background-color: #ffebee; color: #b71c1c; }
+
+        .report-links a {
+            display: inline-block;
+            margin: 5px;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-view { background-color: #007bff; }
+        .btn-view:hover { background-color: #0056b3; }
+        .btn-download { background-color: #28a745; }
+        .btn-download:hover { background-color: #1e7e34; }
+        .btn-history { background-color: #6c757d; }
+        .btn-history:hover { background-color: #545b62; }
+        .warning-box {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>健身數據報告生成器</h1>
+        
+        <form id="fitness-data-form">
+            <div class="form-grid">
+                <div class="section-title">
+                    <h2>👤 基本資訊 (收件人)</h2>
+                </div>
+                <div class="form-group full-width">
+                    <label for="patient-id">會員ID (必填):</label>
+                    <input type="text" id="patient-id" name="patient-id" required placeholder="例如: Member001">
+                </div>
+                <div class="form-group">
+                    <label for="patient-email">會員Email (收件人):</label>
+                    <input type="email" id="patient-email" name="patient-email" placeholder="member@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="coach-email">教練Email (收件人):</label>
+                    <input type="email" id="coach-email" name="coach-email" placeholder="coach@example.com">
+                </div>
+
+                <div class="section-title">
+                    <h2>✉️ 郵件寄送設定 (寄件人)</h2>
+                </div>
+                <div class="warning-box">
+                    <strong>⚠️ 安全警告：</strong> 在此處輸入您的電子郵件密碼會使其在網路上以不安全的方式傳輸。請僅在完全受信任的私人網路環境下用於測試。切勿在公共或生產環境中使用此功能。
+                </div>
+                <div class="form-group">
+                    <label for="sender-email">您的寄件Email (例如 Gmail):</label>
+                    <input type="email" id="sender-email" name="sender-email" required placeholder="your.email@gmail.com">
+                </div>
+                <div class="form-group">
+                    <label for="sender-password">您的Email應用程式密碼:</label>
+                    <input type="password" id="sender-password" name="sender-password" required placeholder="Gmail的16位應用程式密碼">
+                </div>
+
+                <div class="section-title">
+                    <h2>📊 健康數據</h2>
+                </div>
+                
+                <div class="form-group">
+                    <label for="heart-rate">靜息心率 (次/分鐘):</label>
+                    <input type="number" id="heart-rate" name="heart-rate" min="30" max="220" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="exercise-duration">本週運動時間 (分鐘):</label>
+                    <input type="number" id="exercise-duration" name="exercise-duration" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="weight">體重 (公斤):</label>
+                    <input type="number" id="weight" name="weight" min="20" max="300" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="height">身高 (公分):</label>
+                    <input type="number" id="height" name="height" min="50" max="250" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bmi">BMI (自動計算):</label>
+                    <input type="number" id="bmi" name="bmi" min="10" max="50" step="0.1" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="blood-pressure">血壓 (收縮壓/舒張壓):</label>
+                    <input type="text" id="blood-pressure" name="blood-pressure" pattern="\d{2,3}/\d{2,3}" required placeholder="範例: 120/80">
+                </div>
+            </div>
+
+            <div class="form-group full-width checkbox-group">
+                <input type="checkbox" id="send-email" name="send-email" checked>
+                <label for="send-email" style="margin-bottom: 0;">生成報告後發送Email</label>
+            </div>
+
+            <button type="submit">🚀 生成並提交報告</button>
+        </form>
+    </div>
+
+    <div id="report-container" class="container">
+        <h2>📋 報告結果</h2>
+        <div id="report-status"></div>
+        <div id="report-output"></div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const heightInput = document.getElementById('height');
+        const weightInput = document.getElementById('weight');
+        const bmiInput = document.getElementById('bmi');
+        const form = document.getElementById('fitness-data-form');
+        const reportContainer = document.getElementById('report-container');
+        const reportStatus = document.getElementById('report-status');
+        const reportOutput = document.getElementById('report-output');
+        const patientIdInput = document.getElementById('patient-id');
+
+        // Calculate BMI automatically
+        function calculateBMI() {
+            const height = parseFloat(heightInput.value);
+            const weight = parseFloat(weightInput.value);
+            
+            if (height > 0 && weight > 0) {
+                const heightInMeters = height / 100;
+                const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
+                bmiInput.value = bmi;
+            } else {
+                bmiInput.value = '';
+            }
+        }
+        heightInput.addEventListener('input', calculateBMI);
+        weightInput.addEventListener('input', calculateBMI);
+
+        // Handle form submission
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            // Collect form data including sender credentials
+            const formData = {
+                patient_id: patientIdInput.value,
+                patient_email: document.getElementById('patient-email').value,
+                coach_email: document.getElementById('coach-email').value,
+                
+                // Sender credentials from the new form fields
+                sender_email: document.getElementById('sender-email').value,
+                sender_password: document.getElementById('sender-password').value,
+                
+                heart_rate: parseInt(document.getElementById('heart-rate').value),
+                weight: parseFloat(weightInput.value),
+                height: parseInt(heightInput.value),
+                bmi: parseFloat(bmiInput.value),
+                blood_pressure: document.getElementById('blood-pressure').value,
+                exercise_duration: parseInt(document.getElementById('exercise-duration').value),
+                send_email: document.getElementById('send-email').checked
+            };
+
+            // Show loading status
+            reportContainer.style.display = 'block';
+            reportStatus.textContent = '🧠 正在生成報告，請稍候...';
+            reportStatus.className = 'status-loading';
+            reportOutput.innerHTML = '';
+
+            // Send request to backend
+            fetch('http://127.0.0.1:5000/generate_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || '伺服器發生未知錯誤');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    reportStatus.textContent = '✅ 報告生成成功!';
+                    reportStatus.className = 'status-success';
+                    
+                    const backendUrl = 'http://127.0.0.1:5000';
+                    
+                    reportOutput.innerHTML = `
+                        <p>會員 <strong>${data.patient_name}</strong> 的報告已成功建立。</p>
+                        <div class="report-links">
+                            <a href="${backendUrl}${data.view_url}" target="_blank" class="btn-view">👀 線上查看報告</a>
+                            <a href="${backendUrl}${data.download_url}" target="_blank" class="btn-download">📥 下載PDF報告</a>
+                            <a href="${backendUrl}/reports/${data.patient_name}" target="_blank" class="btn-history">📋 查看歷史報告</a>
+                        </div>
+                    `;
+
+                    if (data.email_results && data.email_results.length > 0) {
+                        let emailInfo = '<h4>📧 郵件發送狀態:</h4><ul>';
+                        data.email_results.forEach(result => {
+                            emailInfo += `<li>${result.recipient === 'coach' ? '教練' : '會員'}郵件: ${result.message}</li>`;
+                        });
+                        emailInfo += '</ul>';
+                        reportOutput.innerHTML += emailInfo;
+                    }
+
+                } else {
+                    throw new Error(data.message || '報告生成失敗');
+                }
+            })
+            .catch(error => {
+                reportStatus.textContent = '❌ 報告生成失敗';
+                reportStatus.className = 'status-error';
+                reportOutput.innerHTML = `<p><strong>錯誤詳情:</strong> ${error.message}</p>`;
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
